@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Recordly Mobile</string>
+    <string name="a11y_label">Recordly tap tracker</string>
+    <string name="a11y_desc">Recording ke dauran screen par hue taps ki position note karta hai, taaki editor me auto-zoom aur tap ripples ban sakein. Koi text ya personal data store nahi hota.</string>
+</resources>
