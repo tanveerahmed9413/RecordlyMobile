@@ -13,15 +13,16 @@ import android.graphics.PorterDuffXfermode
 import android.graphics.RectF
 import android.graphics.Shader
 import android.net.Uri
-import androidx.media3.common.C
 import androidx.media3.common.Effect
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
-import androidx.media3.common.audio.SpeedProvider
+import androidx.media3.common.audio.AudioProcessor
+import androidx.media3.common.audio.SonicAudioProcessor
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.BitmapOverlay
 import androidx.media3.effect.MatrixTransformation
 import androidx.media3.effect.OverlayEffect
+import androidx.media3.effect.SpeedChangeEffect
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.EditedMediaItem
 import androidx.media3.transformer.Effects
@@ -54,11 +55,6 @@ data class EditOptions(
     val zoomLevel: Float = 1.8f,
     val ripples: Boolean = true,
 )
-
-private class ConstSpeed(private val s: Float) : SpeedProvider {
-    override fun getSpeed(timeUs: Long): Float = s
-    override fun getNextSpeedChangeTimeUs(timeUs: Long): Long = C.TIME_UNSET
-}
 
 /** Background gradient (video ke liye transparent "hole" ke saath) + tap ripples. */
 private class FxOverlay(
@@ -156,6 +152,15 @@ object Exporter {
         fun srcMs(t: Long) = opt.trimStartMs + (t / 1000f * speed).toLong()
 
         val effects = ArrayList<Effect>()
+        val audioProcessors = ArrayList<AudioProcessor>()
+        if (speed != 1f) {
+            // Sabse pehle: baad ke effects ko output-timeline ke timestamps milte hain
+            effects.add(SpeedChangeEffect(speed))
+            audioProcessors.add(SonicAudioProcessor().apply {
+                setSpeed(speed)
+                setPitch(1f)
+            })
+        }
         if (plan != null && data != null) {
             effects.add(MatrixTransformation { t -> ZoomPlan.matrix(plan.at(srcMs(t), data.w, data.h)) })
         }
@@ -176,8 +181,7 @@ object Exporter {
             .setClippingConfiguration(clip)
             .build()
         val edited = EditedMediaItem.Builder(item)
-            .setEffects(Effects(emptyList(), effects))
-            .apply { if (speed != 1f) setSpeed(ConstSpeed(speed)) }
+            .setEffects(Effects(audioProcessors, effects))
             .build()
 
         val transformer = Transformer.Builder(ctx)
